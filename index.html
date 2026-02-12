@@ -3,184 +3,150 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>3D Wrapped Web Display & Projection Output</title>
+    <title>Immersive Room - Grid Layout (4x2)</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <style>
         body, html {
-            margin: 0;
-            padding: 0;
-            width: 100%;
-            height: 100%;
-            overflow: hidden;
-            background-color: #000;
+            margin: 0; padding: 0; width: 100%; height: 100%;
+            overflow: hidden; background-color: #000; color: white;
             font-family: sans-serif;
         }
 
-        #canvas-container {
-            width: 100vw;
-            height: 100vh;
-        }
-
-        /* The Flat Output for Projectors */
-        #shared-web-canvas {
+        /* The 4x2 Projector Grid (Actual Output) */
+        #projector-grid {
             position: absolute;
-            top: 0;
-            left: 0;
-            width: 100vw;
-            height: 100vh;
-            object-fit: contain;
-            display: none; /* Hidden by default, shown in Projection Mode */
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            display: none; 
             z-index: 100;
             background: #000;
         }
 
-        /* UI Overlay */
-        .ui-overlay {
-            position: absolute;
-            top: 20px;
-            left: 20px;
-            color: #00f2ff;
-            background: rgba(0, 0, 0, 0.85);
-            padding: 15px;
-            border-radius: 8px;
-            border: 1px solid #00f2ff;
-            z-index: 200;
-            pointer-events: auto;
+        #canvas-container { width: 100vw; height: 100vh; }
+
+        .ui-panel {
+            position: absolute; top: 20px; left: 20px;
+            background: rgba(10, 10, 10, 0.95);
+            padding: 20px; border-radius: 12px;
+            border: 1px solid #00f2ff; z-index: 200;
+            width: 320px; box-shadow: 0 0 20px rgba(0, 242, 255, 0.3);
+            transition: opacity 0.3s ease, transform 0.3s ease;
+        }
+
+        .ui-panel.hidden {
+            opacity: 0;
+            pointer-events: none;
+            transform: translateY(-10px);
         }
 
         .btn {
-            background: #00f2ff;
-            color: #000;
-            border: none;
-            padding: 8px 12px;
-            border-radius: 4px;
-            cursor: pointer;
-            font-weight: bold;
-            margin-top: 10px;
+            display: block; width: 100%; padding: 12px;
+            background: #00f2ff; color: #000; border: none;
+            border-radius: 6px; cursor: pointer; font-weight: bold;
+            margin-bottom: 10px; text-transform: uppercase;
         }
-
         .btn:hover { background: #fff; }
 
-        /* VIRTUAL WEBPAGE SOURCE - This is what gets rendered to the walls */
-        #webpage-source {
-            position: absolute;
-            top: -10000px; /* Hide from view but keep in DOM for rendering */
-            width: 5120px; /* 1280 * 4 */
-            height: 1440px; /* 720 * 2 */
-            background: linear-gradient(45deg, #050505, #111);
-            color: white;
-            display: flex;
-            flex-direction: column;
+        .control-group { margin-bottom: 15px; border-top: 1px solid #333; padding-top: 10px; }
+        label { display: block; font-size: 12px; margin-bottom: 5px; color: #888; }
+        
+        .grid-preview {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            grid-template-rows: repeat(2, 1fr);
+            gap: 2px;
+            background: #333;
+            margin-top: 10px;
+            padding: 2px;
         }
-
-        .panoramic-strip {
+        .grid-preview div {
+            aspect-ratio: 16/9;
+            background: #111;
+            font-size: 8px;
             display: flex;
-            height: 720px;
-            width: 5120px;
-        }
-
-        .wall-section {
-            width: 1280px;
-            height: 720px;
-            border: 2px solid rgba(0, 242, 255, 0.3);
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
             align-items: center;
-            box-sizing: border-box;
-            position: relative;
-        }
-
-        .floor-section {
-            width: 1280px;
-            height: 1280px; /* Square for floor */
-            margin: 0 auto;
-            border: 2px solid rgba(0, 242, 255, 0.5);
-            display: flex;
             justify-content: center;
-            align-items: center;
-            background: rgba(0, 242, 255, 0.05);
+            color: #555;
+            border: 1px solid #222;
         }
-
-        h1 { font-size: 80px; margin: 0; text-transform: uppercase; letter-spacing: 5px; }
-        .data-point { font-size: 40px; color: #00f2ff; }
+        .grid-preview div.active {
+            background: #004444;
+            color: #00f2ff;
+            border-color: #00f2ff;
+        }
+        .shortcut-hint {
+            font-size: 10px;
+            color: #666;
+            text-align: center;
+            margin-top: 10px;
+        }
     </style>
 </head>
 <body>
 
-    <div class="ui-overlay">
-        <h2 style="margin: 0;">Display Manager</h2>
-        <p style="font-size: 12px; opacity: 0.8;">Current Mode: <span id="mode-text">3D Preview</span></p>
-        <button class="btn" onclick="toggleMode()">Switch to Projection Mode</button>
-        <div style="margin-top: 10px; font-size: 11px; line-height: 1.4;">
-            Wall 1-4: Top Row (Seamless)<br>
-            Wall 5: Bottom Row (Floor)
+    <div class="ui-panel" id="main-ui">
+        <h2 style="margin: 0 0 5px 0; font-size: 18px;">4x2 Matrix Controller</h2>
+        <p style="font-size: 11px; color: #00f2ff; margin-bottom: 15px;">Output: 7680 x 2160 px</p>
+        
+        <button class="btn" onclick="toggleMode()">Projector Output Mode</button>
+        
+        <div class="control-group">
+            <label>Calibration Grid Intensity</label>
+            <input type="range" min="0" max="100" value="50" style="width:100%" oninput="updateGridOpacity(this.value)">
         </div>
+
+        <div class="control-group">
+            <label>OS Display Mapping (Expected)</label>
+            <div class="grid-preview">
+                <div class="active">W1</div>
+                <div class="active">W2</div>
+                <div class="active">W3</div>
+                <div class="active">W4</div>
+                <div class="active">F5</div>
+                <div>--</div>
+                <div>--</div>
+                <div>--</div>
+            </div>
+            <p style="font-size: 10px; color: #666; margin-top: 10px; line-height: 1.4;">
+                Floor (5) is mapped to bottom-left quadrant.
+            </p>
+        </div>
+        
+        <button class="btn" style="background: #333; color: white;" onclick="resetCamera()">Reset 3D View</button>
+        <div class="shortcut-hint">Press <b>'H'</b> to hide/show this panel</div>
     </div>
 
-    <!-- The physical projector output -->
-    <canvas id="shared-web-canvas"></canvas>
-    
-    <!-- The 3D Preview container -->
+    <canvas id="projector-grid"></canvas>
     <div id="canvas-container"></div>
-
-    <!-- VIRTUAL CONTENT: Edit this HTML to change what appears on your walls -->
-    <div id="webpage-source">
-        <div class="panoramic-strip">
-            <div class="wall-section" style="background: linear-gradient(to right, #200, #000);">
-                <h1>Wall 1</h1>
-                <p class="data-point">System Boot: OK</p>
-            </div>
-            <div class="wall-section">
-                <h1>Wall 2</h1>
-                <p class="data-point">Front Interface</p>
-                <div style="width: 80%; height: 10px; background: #333; margin-top: 20px;">
-                    <div id="progress-bar" style="width: 50%; height: 100%; background: #00f2ff;"></div>
-                </div>
-            </div>
-            <div class="wall-section">
-                <h1>Wall 3</h1>
-                <p class="data-point">Right Wing Data</p>
-            </div>
-            <div class="wall-section" style="background: linear-gradient(to left, #002, #000);">
-                <h1>Wall 4</h1>
-                <p class="data-point">Rear Sensors: Active</p>
-            </div>
-        </div>
-        <div style="height: 720px; width: 100%; display: flex; justify-content: center;">
-            <div class="floor-section">
-                <div style="text-align: center;">
-                    <h1>FLOOR</h1>
-                    <p class="data-point" id="time-display">00:00:00</p>
-                </div>
-            </div>
-        </div>
-    </div>
 
     <script>
         let scene, camera, renderer, controls, cubeGroup;
-        let webCanvas, webCtx, webTexture;
+        let pCanvas, pCtx, pTexture;
         let isProjectionMode = false;
+        let gridOpacity = 0.5;
+        let uiVisible = true;
 
-        const PANEL_RES_W = 1280;
-        const PANEL_RES_H = 720;
+        const DISPLAY_W = 1920;
+        const DISPLAY_H = 1080;
+        const CANVAS_W = DISPLAY_W * 4; 
+        const CANVAS_H = DISPLAY_H * 2; 
 
         function init() {
-            setupWebCanvas();
+            setupProjectorCanvas();
             setup3DScene();
-            
+            setupKeyboardShortcuts();
             window.addEventListener('resize', onWindowResize);
             animate();
         }
 
-        function setupWebCanvas() {
-            webCanvas = document.getElementById('shared-web-canvas');
-            webCanvas.width = PANEL_RES_W * 4;
-            webCanvas.height = PANEL_RES_H * 2;
-            webCtx = webCanvas.getContext('2d');
-            webTexture = new THREE.CanvasTexture(webCanvas);
+        function setupProjectorCanvas() {
+            pCanvas = document.getElementById('projector-grid');
+            pCanvas.width = CANVAS_W; 
+            pCanvas.height = CANVAS_H;
+            pCtx = pCanvas.getContext('2d');
+            pTexture = new THREE.CanvasTexture(pCanvas);
+            pTexture.minFilter = THREE.LinearFilter;
         }
 
         function setup3DScene() {
@@ -188,7 +154,7 @@
             scene.background = new THREE.Color(0x050505);
 
             camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-            camera.position.set(2.5, 1.5, 3.5);
+            camera.position.set(3, 2, 4);
 
             renderer = new THREE.WebGLRenderer({ antialias: true });
             renderer.setSize(window.innerWidth, window.innerHeight);
@@ -198,96 +164,139 @@
             controls = new THREE.OrbitControls(camera, renderer.domElement);
             controls.enableDamping = true;
 
-            const ambientLight = new THREE.AmbientLight(0xffffff, 1.0);
-            scene.add(ambientLight);
-
             cubeGroup = new THREE.Group();
-            
-            const ASPECT_W = 1.92;
-            const ASPECT_H = 1.08;
-            const hW = ASPECT_W / 2;
-            const hH = ASPECT_H / 2;
+            const wW = 1.92; const wH = 1.08;
+            const hW = wW/2; const hH = wH/2;
 
-            const wall1 = createPanel(ASPECT_W, ASPECT_H, 0/4, 0.5, 1/4, 0.5);
-            const wall2 = createPanel(ASPECT_W, ASPECT_H, 1/4, 0.5, 1/4, 0.5);
-            const wall3 = createPanel(ASPECT_W, ASPECT_H, 2/4, 0.5, 1/4, 0.5);
-            const wall4 = createPanel(ASPECT_W, ASPECT_H, 3/4, 0.5, 1/4, 0.5);
-            const wall5 = createPanel(ASPECT_W, ASPECT_W, 0.375, 0, 0.25, 0.5);
+            // UV Mappings for the 4x2 grid
+            // Wall 1-4: Top row (v: 0.5 to 1.0)
+            // Floor 5: Bottom row, under Wall 1 (v: 0.0 to 0.5, u: 0.0 to 0.25)
+            const wall1 = createPanel(wW, wH, 0.00, 0.25, 0.5, 1.0); 
+            const wall2 = createPanel(wW, wH, 0.25, 0.50, 0.5, 1.0); 
+            const wall3 = createPanel(wW, wH, 0.50, 0.75, 0.5, 1.0); 
+            const wall4 = createPanel(wW, wH, 0.75, 1.00, 0.5, 1.0); 
+            const floor = createPanel(wW, wW, 0.00, 0.25, 0.0, 0.5); 
 
             wall1.position.set(-hW, 0, 0); wall1.rotation.y = Math.PI/2;
-            wall2.position.set(0, 0, -hW);
+            wall2.position.set(0, 0, -hW); 
             wall3.position.set(hW, 0, 0); wall3.rotation.y = -Math.PI/2;
             wall4.position.set(0, 0, hW); wall4.rotation.y = Math.PI;
-            wall5.position.set(0, -hH, 0); wall5.rotation.x = -Math.PI/2;
+            floor.position.set(0, -hH, 0); floor.rotation.x = -Math.PI/2;
 
-            cubeGroup.add(wall1, wall2, wall3, wall4, wall5);
+            cubeGroup.add(wall1, wall2, wall3, wall4, floor);
             scene.add(cubeGroup);
         }
 
-        function createPanel(w, h, u, v, uw, vh) {
+        function createPanel(w, h, uMin, uMax, vMin, vMax) {
             const geo = new THREE.PlaneGeometry(w, h);
             const uv = geo.attributes.uv;
             for (let i = 0; i < uv.count; i++) {
-                uv.setXY(i, u + uv.getX(i) * uw, v + uv.getY(i) * vh);
+                let u = uv.getX(i);
+                let v = uv.getY(i);
+                uv.setXY(i, uMin + u * (uMax - uMin), vMin + v * (vMax - vMin));
             }
-            return new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ map: webTexture, side: THREE.DoubleSide }));
+            return new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ map: pTexture, side: THREE.DoubleSide }));
+        }
+
+        function setupKeyboardShortcuts() {
+            window.addEventListener('keydown', (e) => {
+                if (e.key.toLowerCase() === 'h') {
+                    uiVisible = !uiVisible;
+                    const panel = document.getElementById('main-ui');
+                    if (uiVisible) {
+                        panel.classList.remove('hidden');
+                    } else {
+                        panel.classList.add('hidden');
+                    }
+                }
+                
+                if (e.key === 'Escape' && isProjectionMode) {
+                    toggleMode();
+                }
+            });
+        }
+
+        function drawContent() {
+            const time = Date.now() * 0.001;
+            pCtx.fillStyle = '#000';
+            pCtx.fillRect(0, 0, pCanvas.width, pCanvas.height);
+
+            // Panoramic Content (Top Row)
+            const topW = CANVAS_W;
+            const topH = DISPLAY_H;
+            pCtx.strokeStyle = 'rgba(0, 242, 255, 0.15)';
+            pCtx.lineWidth = 1;
+            for(let x=0; x < topW; x += 150) {
+                let offset = (time * 60) % 150;
+                pCtx.beginPath();
+                pCtx.moveTo(x + offset, 0);
+                pCtx.lineTo(x + offset, topH);
+                pCtx.stroke();
+            }
+
+            pCtx.fillStyle = '#fff';
+            pCtx.font = "bold 110px sans-serif";
+            const textX = (time * 190) % (topW + 3000) - 1500;
+            pCtx.fillText("INTERFACE ACTIVE • WRAP-AROUND CALIBRATION • SEAMLESS GRID READY • ", textX, topH/2);
+
+            // Floor Content (Bottom Left)
+            pCtx.save();
+            pCtx.translate(DISPLAY_W/2, DISPLAY_H + DISPLAY_H/2);
+            pCtx.strokeStyle = '#00f2ff';
+            pCtx.lineWidth = 4;
+            pCtx.beginPath();
+            pCtx.arc(0, 0, 250 + Math.sin(time*2.5)*40, 0, Math.PI*2);
+            pCtx.stroke();
+            pCtx.fillStyle = '#00f2ff';
+            pCtx.font = "45px monospace";
+            pCtx.textAlign = "center";
+            pCtx.fillText("CORE FLOOR SECTOR", 0, 0);
+            pCtx.restore();
+
+            // Calibration UI
+            pCtx.strokeStyle = `rgba(0, 242, 255, ${gridOpacity})`;
+            pCtx.lineWidth = 6;
+            pCtx.font = "bold 70px sans-serif";
+            const panels = [
+                {id: "WALL 1", x: 0, y: 0},
+                {id: "WALL 2", x: DISPLAY_W, y: 0},
+                {id: "WALL 3", x: DISPLAY_W*2, y: 0},
+                {id: "WALL 4", x: DISPLAY_W*3, y: 0},
+                {id: "FLOOR 5", x: 0, y: DISPLAY_H} 
+            ];
+
+            panels.forEach(p => {
+                pCtx.strokeRect(p.x + 20, p.y + 20, DISPLAY_W - 40, DISPLAY_H - 40);
+                pCtx.fillStyle = `rgba(0, 242, 255, ${gridOpacity})`;
+                pCtx.fillText(p.id, p.x + 100, p.y + 150);
+                pCtx.beginPath();
+                pCtx.moveTo(p.x + DISPLAY_W/2 - 60, p.y + DISPLAY_H/2);
+                pCtx.lineTo(p.x + DISPLAY_W/2 + 60, p.y + DISPLAY_H/2);
+                pCtx.moveTo(p.x + DISPLAY_W/2, p.y + DISPLAY_H/2 - 60);
+                pCtx.lineTo(p.x + DISPLAY_W/2, p.y + DISPLAY_H/2 + 60);
+                pCtx.stroke();
+            });
+
+            pTexture.needsUpdate = true;
         }
 
         function toggleMode() {
             isProjectionMode = !isProjectionMode;
-            document.getElementById('shared-web-canvas').style.display = isProjectionMode ? 'block' : 'none';
+            pCanvas.style.display = isProjectionMode ? 'block' : 'none';
             document.getElementById('canvas-container').style.display = isProjectionMode ? 'none' : 'block';
-            document.getElementById('mode-text').innerText = isProjectionMode ? 'PROJECTION (Flat)' : '3D Preview';
-        }
-
-        function updateWebpageContent() {
-            // Update live data in the virtual DOM
-            const now = new Date();
-            document.getElementById('time-display').innerText = now.toTimeString().split(' ')[0];
-            document.getElementById('progress-bar').style.width = ((Date.now() / 50) % 100) + "%";
-
-            // Use html2canvas to capture the virtual DOM and draw to the shared texture
-            // For production with projectors, you'd likely use a high-speed canvas drawing loop
-            // instead of html2canvas for performance, but this shows how to render "HTML".
             
-            // To keep it high-performance for this demo, we'll draw directly to webCtx
-            // mimicking the layout of the #webpage-source
-            
-            const time = Date.now() * 0.001;
-            webCtx.fillStyle = '#050505';
-            webCtx.fillRect(0, 0, webCanvas.width, webCanvas.height);
-
-            // Simulate the seamless wrap across 1-4
-            webCtx.fillStyle = '#fff';
-            webCtx.textAlign = 'center';
-            webCtx.font = 'bold 100px sans-serif';
-            
-            // Draw text that travels across the walls
-            const xPos = (time * 150) % (webCanvas.width + 1000) - 500;
-            webCtx.globalAlpha = 0.3;
-            webCtx.fillText("SYSTEM STATUS: NOMINAL • SEAMLESS CALIBRATION ACTIVE • ", xPos, 400);
-            webCtx.globalAlpha = 1.0;
-
-            // Draw Wall Dividers for testing alignment
-            webCtx.strokeStyle = '#00f2ff';
-            webCtx.lineWidth = 5;
-            for(let i=0; i<=4; i++) {
-                webCtx.beginPath();
-                webCtx.moveTo(i * PANEL_RES_W, 0);
-                webCtx.lineTo(i * PANEL_RES_W, PANEL_RES_H);
-                webCtx.stroke();
-                if(i < 4) webCtx.fillText(i+1, (i+0.5)*PANEL_RES_W, 200);
+            // Added catch block to handle permission policy restrictions on fullscreen
+            if (isProjectionMode && document.documentElement.requestFullscreen) {
+                document.documentElement.requestFullscreen().catch(err => {
+                    console.warn("Fullscreen disabled by browser policy/sandbox.");
+                });
+            } else if (!isProjectionMode && document.exitFullscreen && document.fullscreenElement) {
+                document.exitFullscreen().catch(() => {});
             }
-
-            // Floor Area (Wall 5)
-            const fX = PANEL_RES_W * 1.5;
-            const fY = PANEL_RES_H;
-            webCtx.strokeRect(fX, fY, PANEL_RES_W, PANEL_RES_W);
-            webCtx.fillText("5", fX + PANEL_RES_W/2, fY + PANEL_RES_W/2);
-
-            webTexture.needsUpdate = true;
         }
 
+        function updateGridOpacity(val) { gridOpacity = val / 100; }
+        function resetCamera() { controls.reset(); camera.position.set(3, 2, 4); }
         function onWindowResize() {
             camera.aspect = window.innerWidth / window.innerHeight;
             camera.updateProjectionMatrix();
@@ -296,7 +305,7 @@
 
         function animate() {
             requestAnimationFrame(animate);
-            updateWebpageContent();
+            drawContent();
             if (!isProjectionMode) controls.update();
             renderer.render(scene, camera);
         }
