@@ -3,308 +3,43 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Immersive Web Workspace (Walls 1-4)</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <title>Panoramic Export</title>
     <style>
-        body, html {
-            margin: 0; padding: 0; width: 100%; height: 100%;
-            overflow: hidden; background-color: #050505; color: white;
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-        }
-
-        #canvas-container { width: 100vw; height: 100vh; }
-
-        #projector-output {
-            position: absolute; top: 0; left: 0;
-            width: 100%; height: 100%;
-            display: none; z-index: 100;
-            background: #000;
-        }
-
-        #ui-panel {
-            position: absolute; top: 20px; left: 20px; bottom: 20px;
-            width: 400px; background: rgba(15, 15, 15, 0.95);
-            border: 1px solid #333; border-radius: 12px;
-            display: flex; flex-direction: column; z-index: 200;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-            transition: opacity 0.3s ease, transform 0.3s ease;
-        }
-
-        #ui-panel.hidden { opacity: 0; transform: translateX(-20px); pointer-events: none; }
-
-        .header { padding: 20px; border-bottom: 1px solid #333; }
-        .header h2 { margin: 0; font-size: 18px; color: #00f2ff; }
-        .header p { margin: 5px 0 0 0; font-size: 12px; color: #888; }
-
-        .editor-section { flex-grow: 1; display: flex; flex-direction: column; padding: 15px; gap: 10px; }
-        .editor-section label { font-size: 11px; text-transform: uppercase; color: #666; font-weight: bold; }
-        
-        textarea {
-            flex-grow: 1; background: #000; color: #00f2ff; border: 1px solid #444;
-            border-radius: 6px; padding: 10px; font-family: 'Fira Code', monospace;
-            font-size: 13px; resize: none; outline: none;
-        }
-        textarea:focus { border-color: #00f2ff; }
-
-        .controls { padding: 20px; border-top: 1px solid #333; display: flex; flex-direction: column; gap: 10px; }
-        
-        .btn {
-            padding: 12px; border: none; border-radius: 6px; font-weight: bold;
-            cursor: pointer; text-transform: uppercase; transition: all 0.2s;
-        }
-        .btn-primary { background: #00f2ff; color: #000; }
-        .btn-primary:hover { background: #fff; transform: translateY(-1px); }
-        .btn-secondary { background: #333; color: #fff; }
-
-        .kbd-hint { font-size: 10px; color: #555; text-align: center; margin-top: 5px; }
-
-        #render-container {
-            position: absolute;
-            top: -10000px;
-            left: -10000px;
-            width: 7680px;
-            height: 1080px;
-            overflow: hidden;
-            background: #000;
-            font-family: sans-serif; 
-        }
+        body, html { margin: 0; padding: 0; background: #000; width: 100%; height: 100%; overflow: auto; }
     </style>
 </head>
 <body>
-
-    <div id="ui-panel">
-        <div class="header">
-            <h2>Workspace: Walls 1-4</h2>
-            <p>Target Resolution: 7680 x 1080 (32:9 Surround)</p>
+<div style="width: 7680px; height: 1080px; background: #0f172a; color: white; display: grid; grid-template-columns: repeat(4, 1920px); font-family: 'Segoe UI', system-ui, sans-serif; position: relative; overflow: hidden; margin: 0; padding: 0;">
+    <style>* { box-sizing: border-box; }</style>
+    
+    <!-- Display 1: Left (Hidden Popup) -->
+    <div style="position: relative; z-index: 1; padding: 100px; display: flex; align-items: center; justify-content: center; border-right: 1px solid rgba(255,255,255,0.1);">
+        <div id="popup-left" style="width: 600px; height: 600px; background: #3b82f6; border-radius: 30px; box-shadow: 0 0 100px rgba(59, 130, 246, 0.5); display: flex; align-items: center; justify-content: center; opacity: 0; transition: opacity 0.5s ease-in-out;">
+            <span style="font-size: 60px; font-weight: bold;">LEFT POPUP</span>
         </div>
+    </div>
 
-        <div class="editor-section">
-            <label>HTML / Content Source</label>
-            <textarea id="html-input" placeholder="Enter HTML content here...">
-<div style="width: 7680px; height: 1080px; display: flex; align-items: center; justify-content: space-around; background: linear-gradient(90deg, #050505, #151515); color: white; font-family: sans-serif;">
-    <div style="text-align: center; border: 4px solid #00f2ff; padding: 60px; border-radius: 30px;">
-        <h1 style="font-size: 120px; color: #00f2ff; margin: 0;">WALL 1</h1>
-        <p style="font-size: 40px; margin-top: 20px;">LEFT WING TERMINAL</p>
+    <!-- Display 2: Front (Red Button) -->
+    <div style="position: relative; z-index: 1; padding: 100px; display: flex; align-items: center; justify-content: center; border-right: 1px solid rgba(255,255,255,0.1);">
+        <div style="text-align: center;">
+            <div onclick="document.getElementById('popup-left').style.opacity = '1'; document.getElementById('popup-right').style.opacity = '1';" style="width: 300px; height: 300px; background: #ef4444; border-radius: 50%; box-shadow: 0 0 60px rgba(239, 68, 68, 0.6); display: flex; align-items: center; justify-content: center; border: 10px solid rgba(255,255,255,0.2); cursor: pointer;">
+                <span style="font-size: 40px; font-weight: bold;">PRESS</span>
+            </div>
+            <p style="margin-top: 40px; font-size: 24px; color: #94a3b8;">Click button in Play Mode</p>
+        </div>
     </div>
-    <div style="text-align: center; border: 4px solid white; padding: 60px; border-radius: 30px;">
-        <h1 style="font-size: 120px; color: #fff; margin: 0;">WALL 2</h1>
-        <p style="font-size: 40px; margin-top: 20px;">MAIN VISUAL HUB</p>
+
+    <!-- Display 3: Right (Hidden Popup) -->
+    <div style="position: relative; z-index: 1; padding: 100px; display: flex; align-items: center; justify-content: center; border-right: 1px solid rgba(255,255,255,0.1);">
+        <div id="popup-right" style="width: 600px; height: 600px; background: #3b82f6; border-radius: 30px; box-shadow: 0 0 100px rgba(59, 130, 246, 0.5); display: flex; align-items: center; justify-content: center; opacity: 0; transition: opacity 0.5s ease-in-out;">
+            <span style="font-size: 60px; font-weight: bold;">RIGHT POPUP</span>
+        </div>
     </div>
-    <div style="text-align: center; border: 4px solid #00f2ff; padding: 60px; border-radius: 30px;">
-        <h1 style="font-size: 120px; color: #00f2ff; margin: 0;">WALL 3</h1>
-        <p style="font-size: 40px; margin-top: 20px;">RIGHT WING TERMINAL</p>
-    </div>
-    <div style="text-align: center; border: 4px solid white; padding: 60px; border-radius: 30px;">
-        <h1 style="font-size: 120px; color: #fff; margin: 0;">WALL 4</h1>
-        <p style="font-size: 40px; margin-top: 20px;">REAR WRAP SECTOR</p>
+
+    <!-- Display 4: Back -->
+    <div style="position: relative; z-index: 1; padding: 100px; display: flex; align-items: center; justify-content: center;">
+        <div style="font-size: 120px; font-weight: 900; color: #334155;">BACK</div>
     </div>
 </div>
-            </textarea>
-        </div>
-
-        <div class="controls">
-            <button class="btn btn-primary" onclick="toggleMode()">Projector View (7680x1080)</button>
-            <button class="btn btn-secondary" onclick="resetView()">Reset Simulator Camera</button>
-            <div class="kbd-hint">Press <b>'H'</b> to toggle this panel</div>
-        </div>
-    </div>
-
-    <canvas id="projector-output"></canvas>
-    <div id="canvas-container"></div>
-    <div id="render-container"></div>
-    <canvas id="texture-canvas" width="7680" height="1080" style="display:none;"></canvas>
-
-    <script>
-        let scene, camera, renderer, controls, roomGroup;
-        let textureCanvas, textureCtx, wallTexture;
-        let isProjectionMode = false;
-        let uiVisible = true;
-        let renderTimeout;
-        let isTainted = false;
-
-        const WALL_W = 1920;
-        const WALL_H = 1080;
-        const TOTAL_W = WALL_W * 4;
-
-        function init() {
-            setupTextureSource();
-            setup3DScene();
-            setupInteractions();
-            animate();
-        }
-
-        function setupTextureSource() {
-            textureCanvas = document.getElementById('texture-canvas');
-            textureCtx = textureCanvas.getContext('2d', { alpha: false });
-            
-            textureCtx.fillStyle = '#000';
-            textureCtx.fillRect(0, 0, TOTAL_W, WALL_H);
-
-            wallTexture = new THREE.CanvasTexture(textureCanvas);
-            wallTexture.minFilter = THREE.LinearFilter;
-            wallTexture.anisotropy = 4;
-        }
-
-        function setup3DScene() {
-            scene = new THREE.Scene();
-            scene.background = new THREE.Color(0x050505);
-
-            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-            camera.position.set(0, 0, 0.1); 
-
-            renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
-            renderer.setSize(window.innerWidth, window.innerHeight);
-            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-            document.getElementById('canvas-container').appendChild(renderer.domElement);
-
-            controls = new THREE.OrbitControls(camera, renderer.domElement);
-            controls.enableDamping = true;
-            controls.rotateSpeed = -0.4; 
-
-            roomGroup = new THREE.Group();
-            const w = 1.92; const h = 1.08;
-            const hw = w/2;
-
-            function createWall(uStart) {
-                const geo = new THREE.PlaneGeometry(w, h);
-                const uv = geo.attributes.uv;
-                for (let i = 0; i < uv.count; i++) {
-                    uv.setXY(i, uStart + uv.getX(i) * 0.25, uv.getY(i));
-                }
-                const mat = new THREE.MeshBasicMaterial({ map: wallTexture, side: THREE.DoubleSide });
-                return new THREE.Mesh(geo, mat);
-            }
-
-            // Wall 1: Left
-            const w1 = createWall(0.00);
-            w1.position.set(-hw, 0, 0);
-            w1.rotation.y = Math.PI / 2;
-            roomGroup.add(w1);
-
-            // Wall 2: Front
-            const w2 = createWall(0.25);
-            w2.position.set(0, 0, -hw);
-            roomGroup.add(w2);
-
-            // Wall 3: Right
-            const w3 = createWall(0.50);
-            w3.position.set(hw, 0, 0);
-            w3.rotation.y = -Math.PI / 2;
-            roomGroup.add(w3);
-
-            // Wall 4: Back
-            const w4 = createWall(0.75);
-            w4.position.set(0, 0, hw);
-            w4.rotation.y = Math.PI;
-            roomGroup.add(w4);
-
-            scene.add(roomGroup);
-        }
-
-        async function renderHTMLToTexture() {
-            if (isTainted) return;
-
-            const html = document.getElementById('html-input').value;
-            const container = document.getElementById('render-container');
-            container.innerHTML = html;
-
-            try {
-                const canvas = await html2canvas(container, {
-                    width: TOTAL_W,
-                    height: WALL_H,
-                    scale: 1,
-                    logging: false,
-                    useCORS: false,
-                    allowTaint: false,
-                    backgroundColor: '#000'
-                });
-
-                textureCtx.drawImage(canvas, 0, 0);
-                
-                try {
-                    wallTexture.needsUpdate = true;
-                } catch (e) {
-                    console.error("WebGL Texture update failed:", e);
-                    isTainted = true;
-                }
-                
-                if (isProjectionMode) {
-                    const outCanvas = document.getElementById('projector-output');
-                    const outCtx = outCanvas.getContext('2d');
-                    outCanvas.width = window.innerWidth;
-                    outCanvas.height = window.innerHeight;
-                    const scale = window.innerWidth / TOTAL_W;
-                    outCtx.fillStyle = '#000';
-                    outCtx.fillRect(0, 0, outCanvas.width, outCanvas.height);
-                    outCtx.setTransform(scale, 0, 0, scale, 0, (window.innerHeight - WALL_H * scale) / 2);
-                    outCtx.drawImage(textureCanvas, 0, 0);
-                }
-            } catch (e) {
-                console.error("HTML2Canvas failed:", e);
-            }
-        }
-
-        function debouncedRender() {
-            clearTimeout(renderTimeout);
-            renderTimeout = setTimeout(renderHTMLToTexture, 500);
-        }
-
-        function toggleMode() {
-            isProjectionMode = !isProjectionMode;
-            document.getElementById('projector-output').style.display = isProjectionMode ? 'block' : 'none';
-            document.getElementById('canvas-container').style.display = isProjectionMode ? 'none' : 'block';
-
-            if (isProjectionMode && document.documentElement.requestFullscreen) {
-                document.documentElement.requestFullscreen().catch(() => {});
-            }
-            renderHTMLToTexture();
-        }
-
-        function setupInteractions() {
-            window.addEventListener('keydown', (e) => {
-                if (e.key.toLowerCase() === 'h' && document.activeElement.tagName !== 'TEXTAREA') {
-                    uiVisible = !uiVisible;
-                    document.getElementById('ui-panel').classList.toggle('hidden', !uiVisible);
-                }
-                if (e.key === 'Escape' && isProjectionMode) toggleMode();
-            });
-
-            document.getElementById('html-input').addEventListener('input', debouncedRender);
-            
-            window.addEventListener('resize', () => {
-                camera.aspect = window.innerWidth / window.innerHeight;
-                camera.updateProjectionMatrix();
-                renderer.setSize(window.innerWidth, window.innerHeight);
-                debouncedRender();
-            });
-        }
-
-        function resetView() {
-            controls.reset();
-            camera.position.set(0, 0, 0.1);
-        }
-
-        function animate() {
-            requestAnimationFrame(animate);
-            if (!isProjectionMode) {
-                controls.update();
-                try {
-                    renderer.render(scene, camera);
-                } catch (e) {
-                    if (e.message.includes('Tainted')) {
-                        console.error("Rendering halted due to tainted canvas.");
-                        isTainted = true;
-                    }
-                }
-            }
-        }
-
-        window.onload = () => {
-            init();
-            renderHTMLToTexture();
-        };
-    </script>
 </body>
 </html>
