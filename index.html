@@ -3,150 +3,148 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Immersive Room - Grid Layout (4x2)</title>
+    <title>Immersive Web Workspace (Walls 1-4)</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <style>
         body, html {
             margin: 0; padding: 0; width: 100%; height: 100%;
-            overflow: hidden; background-color: #000; color: white;
-            font-family: sans-serif;
-        }
-
-        /* The 4x2 Projector Grid (Actual Output) */
-        #projector-grid {
-            position: absolute;
-            top: 0; left: 0;
-            width: 100%; height: 100%;
-            display: none; 
-            z-index: 100;
-            background: #000;
+            overflow: hidden; background-color: #050505; color: white;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
         }
 
         #canvas-container { width: 100vw; height: 100vh; }
 
-        .ui-panel {
-            position: absolute; top: 20px; left: 20px;
-            background: rgba(10, 10, 10, 0.95);
-            padding: 20px; border-radius: 12px;
-            border: 1px solid #00f2ff; z-index: 200;
-            width: 320px; box-shadow: 0 0 20px rgba(0, 242, 255, 0.3);
+        #projector-output {
+            position: absolute; top: 0; left: 0;
+            width: 100%; height: 100%;
+            display: none; z-index: 100;
+            background: #000;
+        }
+
+        #ui-panel {
+            position: absolute; top: 20px; left: 20px; bottom: 20px;
+            width: 400px; background: rgba(15, 15, 15, 0.95);
+            border: 1px solid #333; border-radius: 12px;
+            display: flex; flex-direction: column; z-index: 200;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
             transition: opacity 0.3s ease, transform 0.3s ease;
         }
 
-        .ui-panel.hidden {
-            opacity: 0;
-            pointer-events: none;
-            transform: translateY(-10px);
-        }
+        #ui-panel.hidden { opacity: 0; transform: translateX(-20px); pointer-events: none; }
 
-        .btn {
-            display: block; width: 100%; padding: 12px;
-            background: #00f2ff; color: #000; border: none;
-            border-radius: 6px; cursor: pointer; font-weight: bold;
-            margin-bottom: 10px; text-transform: uppercase;
-        }
-        .btn:hover { background: #fff; }
+        .header { padding: 20px; border-bottom: 1px solid #333; }
+        .header h2 { margin: 0; font-size: 18px; color: #00f2ff; }
+        .header p { margin: 5px 0 0 0; font-size: 12px; color: #888; }
 
-        .control-group { margin-bottom: 15px; border-top: 1px solid #333; padding-top: 10px; }
-        label { display: block; font-size: 12px; margin-bottom: 5px; color: #888; }
+        .editor-section { flex-grow: 1; display: flex; flex-direction: column; padding: 15px; gap: 10px; }
+        .editor-section label { font-size: 11px; text-transform: uppercase; color: #666; font-weight: bold; }
         
-        .grid-preview {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            grid-template-rows: repeat(2, 1fr);
-            gap: 2px;
-            background: #333;
-            margin-top: 10px;
-            padding: 2px;
+        textarea {
+            flex-grow: 1; background: #000; color: #00f2ff; border: 1px solid #444;
+            border-radius: 6px; padding: 10px; font-family: 'Fira Code', monospace;
+            font-size: 13px; resize: none; outline: none;
         }
-        .grid-preview div {
-            aspect-ratio: 16/9;
-            background: #111;
-            font-size: 8px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: #555;
-            border: 1px solid #222;
+        textarea:focus { border-color: #00f2ff; }
+
+        .controls { padding: 20px; border-top: 1px solid #333; display: flex; flex-direction: column; gap: 10px; }
+        
+        .btn {
+            padding: 12px; border: none; border-radius: 6px; font-weight: bold;
+            cursor: pointer; text-transform: uppercase; transition: all 0.2s;
         }
-        .grid-preview div.active {
-            background: #004444;
-            color: #00f2ff;
-            border-color: #00f2ff;
-        }
-        .shortcut-hint {
-            font-size: 10px;
-            color: #666;
-            text-align: center;
-            margin-top: 10px;
+        .btn-primary { background: #00f2ff; color: #000; }
+        .btn-primary:hover { background: #fff; transform: translateY(-1px); }
+        .btn-secondary { background: #333; color: #fff; }
+
+        .kbd-hint { font-size: 10px; color: #555; text-align: center; margin-top: 5px; }
+
+        #render-container {
+            position: absolute;
+            top: -10000px;
+            left: -10000px;
+            width: 7680px;
+            height: 1080px;
+            overflow: hidden;
+            background: #000;
+            font-family: sans-serif; 
         }
     </style>
 </head>
 <body>
 
-    <div class="ui-panel" id="main-ui">
-        <h2 style="margin: 0 0 5px 0; font-size: 18px;">4x2 Matrix Controller</h2>
-        <p style="font-size: 11px; color: #00f2ff; margin-bottom: 15px;">Output: 7680 x 2160 px</p>
-        
-        <button class="btn" onclick="toggleMode()">Projector Output Mode</button>
-        
-        <div class="control-group">
-            <label>Calibration Grid Intensity</label>
-            <input type="range" min="0" max="100" value="50" style="width:100%" oninput="updateGridOpacity(this.value)">
+    <div id="ui-panel">
+        <div class="header">
+            <h2>Workspace: Walls 1-4</h2>
+            <p>Target Resolution: 7680 x 1080 (32:9 Surround)</p>
         </div>
 
-        <div class="control-group">
-            <label>OS Display Mapping (Expected)</label>
-            <div class="grid-preview">
-                <div class="active">W1</div>
-                <div class="active">W2</div>
-                <div class="active">W3</div>
-                <div class="active">W4</div>
-                <div class="active">F5</div>
-                <div>--</div>
-                <div>--</div>
-                <div>--</div>
-            </div>
-            <p style="font-size: 10px; color: #666; margin-top: 10px; line-height: 1.4;">
-                Floor (5) is mapped to bottom-left quadrant.
-            </p>
+        <div class="editor-section">
+            <label>HTML / Content Source</label>
+            <textarea id="html-input" placeholder="Enter HTML content here...">
+<div style="width: 7680px; height: 1080px; display: flex; align-items: center; justify-content: space-around; background: linear-gradient(90deg, #050505, #151515); color: white; font-family: sans-serif;">
+    <div style="text-align: center; border: 4px solid #00f2ff; padding: 60px; border-radius: 30px;">
+        <h1 style="font-size: 120px; color: #00f2ff; margin: 0;">WALL 1</h1>
+        <p style="font-size: 40px; margin-top: 20px;">LEFT WING TERMINAL</p>
+    </div>
+    <div style="text-align: center; border: 4px solid white; padding: 60px; border-radius: 30px;">
+        <h1 style="font-size: 120px; color: #fff; margin: 0;">WALL 2</h1>
+        <p style="font-size: 40px; margin-top: 20px;">MAIN VISUAL HUB</p>
+    </div>
+    <div style="text-align: center; border: 4px solid #00f2ff; padding: 60px; border-radius: 30px;">
+        <h1 style="font-size: 120px; color: #00f2ff; margin: 0;">WALL 3</h1>
+        <p style="font-size: 40px; margin-top: 20px;">RIGHT WING TERMINAL</p>
+    </div>
+    <div style="text-align: center; border: 4px solid white; padding: 60px; border-radius: 30px;">
+        <h1 style="font-size: 120px; color: #fff; margin: 0;">WALL 4</h1>
+        <p style="font-size: 40px; margin-top: 20px;">REAR WRAP SECTOR</p>
+    </div>
+</div>
+            </textarea>
         </div>
-        
-        <button class="btn" style="background: #333; color: white;" onclick="resetCamera()">Reset 3D View</button>
-        <div class="shortcut-hint">Press <b>'H'</b> to hide/show this panel</div>
+
+        <div class="controls">
+            <button class="btn btn-primary" onclick="toggleMode()">Projector View (7680x1080)</button>
+            <button class="btn btn-secondary" onclick="resetView()">Reset Simulator Camera</button>
+            <div class="kbd-hint">Press <b>'H'</b> to toggle this panel</div>
+        </div>
     </div>
 
-    <canvas id="projector-grid"></canvas>
+    <canvas id="projector-output"></canvas>
     <div id="canvas-container"></div>
+    <div id="render-container"></div>
+    <canvas id="texture-canvas" width="7680" height="1080" style="display:none;"></canvas>
 
     <script>
-        let scene, camera, renderer, controls, cubeGroup;
-        let pCanvas, pCtx, pTexture;
+        let scene, camera, renderer, controls, roomGroup;
+        let textureCanvas, textureCtx, wallTexture;
         let isProjectionMode = false;
-        let gridOpacity = 0.5;
         let uiVisible = true;
+        let renderTimeout;
+        let isTainted = false;
 
-        const DISPLAY_W = 1920;
-        const DISPLAY_H = 1080;
-        const CANVAS_W = DISPLAY_W * 4; 
-        const CANVAS_H = DISPLAY_H * 2; 
+        const WALL_W = 1920;
+        const WALL_H = 1080;
+        const TOTAL_W = WALL_W * 4;
 
         function init() {
-            setupProjectorCanvas();
+            setupTextureSource();
             setup3DScene();
-            setupKeyboardShortcuts();
-            window.addEventListener('resize', onWindowResize);
+            setupInteractions();
             animate();
         }
 
-        function setupProjectorCanvas() {
-            pCanvas = document.getElementById('projector-grid');
-            pCanvas.width = CANVAS_W; 
-            pCanvas.height = CANVAS_H;
-            pCtx = pCanvas.getContext('2d');
-            pTexture = new THREE.CanvasTexture(pCanvas);
-            pTexture.minFilter = THREE.LinearFilter;
+        function setupTextureSource() {
+            textureCanvas = document.getElementById('texture-canvas');
+            textureCtx = textureCanvas.getContext('2d', { alpha: false });
+            
+            textureCtx.fillStyle = '#000';
+            textureCtx.fillRect(0, 0, TOTAL_W, WALL_H);
+
+            wallTexture = new THREE.CanvasTexture(textureCanvas);
+            wallTexture.minFilter = THREE.LinearFilter;
+            wallTexture.anisotropy = 4;
         }
 
         function setup3DScene() {
@@ -154,163 +152,159 @@
             scene.background = new THREE.Color(0x050505);
 
             camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-            camera.position.set(3, 2, 4);
+            camera.position.set(0, 0, 0.1); 
 
-            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
             renderer.setSize(window.innerWidth, window.innerHeight);
-            renderer.setPixelRatio(window.devicePixelRatio);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
             document.getElementById('canvas-container').appendChild(renderer.domElement);
 
             controls = new THREE.OrbitControls(camera, renderer.domElement);
             controls.enableDamping = true;
+            controls.rotateSpeed = -0.4; 
 
-            cubeGroup = new THREE.Group();
-            const wW = 1.92; const wH = 1.08;
-            const hW = wW/2; const hH = wH/2;
+            roomGroup = new THREE.Group();
+            const w = 1.92; const h = 1.08;
+            const hw = w/2;
 
-            // UV Mappings for the 4x2 grid
-            // Wall 1-4: Top row (v: 0.5 to 1.0)
-            // Floor 5: Bottom row, under Wall 1 (v: 0.0 to 0.5, u: 0.0 to 0.25)
-            const wall1 = createPanel(wW, wH, 0.00, 0.25, 0.5, 1.0); 
-            const wall2 = createPanel(wW, wH, 0.25, 0.50, 0.5, 1.0); 
-            const wall3 = createPanel(wW, wH, 0.50, 0.75, 0.5, 1.0); 
-            const wall4 = createPanel(wW, wH, 0.75, 1.00, 0.5, 1.0); 
-            const floor = createPanel(wW, wW, 0.00, 0.25, 0.0, 0.5); 
-
-            wall1.position.set(-hW, 0, 0); wall1.rotation.y = Math.PI/2;
-            wall2.position.set(0, 0, -hW); 
-            wall3.position.set(hW, 0, 0); wall3.rotation.y = -Math.PI/2;
-            wall4.position.set(0, 0, hW); wall4.rotation.y = Math.PI;
-            floor.position.set(0, -hH, 0); floor.rotation.x = -Math.PI/2;
-
-            cubeGroup.add(wall1, wall2, wall3, wall4, floor);
-            scene.add(cubeGroup);
-        }
-
-        function createPanel(w, h, uMin, uMax, vMin, vMax) {
-            const geo = new THREE.PlaneGeometry(w, h);
-            const uv = geo.attributes.uv;
-            for (let i = 0; i < uv.count; i++) {
-                let u = uv.getX(i);
-                let v = uv.getY(i);
-                uv.setXY(i, uMin + u * (uMax - uMin), vMin + v * (vMax - vMin));
+            function createWall(uStart) {
+                const geo = new THREE.PlaneGeometry(w, h);
+                const uv = geo.attributes.uv;
+                for (let i = 0; i < uv.count; i++) {
+                    uv.setXY(i, uStart + uv.getX(i) * 0.25, uv.getY(i));
+                }
+                const mat = new THREE.MeshBasicMaterial({ map: wallTexture, side: THREE.DoubleSide });
+                return new THREE.Mesh(geo, mat);
             }
-            return new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ map: pTexture, side: THREE.DoubleSide }));
+
+            // Wall 1: Left
+            const w1 = createWall(0.00);
+            w1.position.set(-hw, 0, 0);
+            w1.rotation.y = Math.PI / 2;
+            roomGroup.add(w1);
+
+            // Wall 2: Front
+            const w2 = createWall(0.25);
+            w2.position.set(0, 0, -hw);
+            roomGroup.add(w2);
+
+            // Wall 3: Right
+            const w3 = createWall(0.50);
+            w3.position.set(hw, 0, 0);
+            w3.rotation.y = -Math.PI / 2;
+            roomGroup.add(w3);
+
+            // Wall 4: Back
+            const w4 = createWall(0.75);
+            w4.position.set(0, 0, hw);
+            w4.rotation.y = Math.PI;
+            roomGroup.add(w4);
+
+            scene.add(roomGroup);
         }
 
-        function setupKeyboardShortcuts() {
-            window.addEventListener('keydown', (e) => {
-                if (e.key.toLowerCase() === 'h') {
-                    uiVisible = !uiVisible;
-                    const panel = document.getElementById('main-ui');
-                    if (uiVisible) {
-                        panel.classList.remove('hidden');
-                    } else {
-                        panel.classList.add('hidden');
-                    }
+        async function renderHTMLToTexture() {
+            if (isTainted) return;
+
+            const html = document.getElementById('html-input').value;
+            const container = document.getElementById('render-container');
+            container.innerHTML = html;
+
+            try {
+                const canvas = await html2canvas(container, {
+                    width: TOTAL_W,
+                    height: WALL_H,
+                    scale: 1,
+                    logging: false,
+                    useCORS: false,
+                    allowTaint: false,
+                    backgroundColor: '#000'
+                });
+
+                textureCtx.drawImage(canvas, 0, 0);
+                
+                try {
+                    wallTexture.needsUpdate = true;
+                } catch (e) {
+                    console.error("WebGL Texture update failed:", e);
+                    isTainted = true;
                 }
                 
-                if (e.key === 'Escape' && isProjectionMode) {
-                    toggleMode();
+                if (isProjectionMode) {
+                    const outCanvas = document.getElementById('projector-output');
+                    const outCtx = outCanvas.getContext('2d');
+                    outCanvas.width = window.innerWidth;
+                    outCanvas.height = window.innerHeight;
+                    const scale = window.innerWidth / TOTAL_W;
+                    outCtx.fillStyle = '#000';
+                    outCtx.fillRect(0, 0, outCanvas.width, outCanvas.height);
+                    outCtx.setTransform(scale, 0, 0, scale, 0, (window.innerHeight - WALL_H * scale) / 2);
+                    outCtx.drawImage(textureCanvas, 0, 0);
                 }
-            });
+            } catch (e) {
+                console.error("HTML2Canvas failed:", e);
+            }
         }
 
-        function drawContent() {
-            const time = Date.now() * 0.001;
-            pCtx.fillStyle = '#000';
-            pCtx.fillRect(0, 0, pCanvas.width, pCanvas.height);
-
-            // Panoramic Content (Top Row)
-            const topW = CANVAS_W;
-            const topH = DISPLAY_H;
-            pCtx.strokeStyle = 'rgba(0, 242, 255, 0.15)';
-            pCtx.lineWidth = 1;
-            for(let x=0; x < topW; x += 150) {
-                let offset = (time * 60) % 150;
-                pCtx.beginPath();
-                pCtx.moveTo(x + offset, 0);
-                pCtx.lineTo(x + offset, topH);
-                pCtx.stroke();
-            }
-
-            pCtx.fillStyle = '#fff';
-            pCtx.font = "bold 110px sans-serif";
-            const textX = (time * 190) % (topW + 3000) - 1500;
-            pCtx.fillText("INTERFACE ACTIVE • WRAP-AROUND CALIBRATION • SEAMLESS GRID READY • ", textX, topH/2);
-
-            // Floor Content (Bottom Left)
-            pCtx.save();
-            pCtx.translate(DISPLAY_W/2, DISPLAY_H + DISPLAY_H/2);
-            pCtx.strokeStyle = '#00f2ff';
-            pCtx.lineWidth = 4;
-            pCtx.beginPath();
-            pCtx.arc(0, 0, 250 + Math.sin(time*2.5)*40, 0, Math.PI*2);
-            pCtx.stroke();
-            pCtx.fillStyle = '#00f2ff';
-            pCtx.font = "45px monospace";
-            pCtx.textAlign = "center";
-            pCtx.fillText("CORE FLOOR SECTOR", 0, 0);
-            pCtx.restore();
-
-            // Calibration UI
-            pCtx.strokeStyle = `rgba(0, 242, 255, ${gridOpacity})`;
-            pCtx.lineWidth = 6;
-            pCtx.font = "bold 70px sans-serif";
-            const panels = [
-                {id: "WALL 1", x: 0, y: 0},
-                {id: "WALL 2", x: DISPLAY_W, y: 0},
-                {id: "WALL 3", x: DISPLAY_W*2, y: 0},
-                {id: "WALL 4", x: DISPLAY_W*3, y: 0},
-                {id: "FLOOR 5", x: 0, y: DISPLAY_H} 
-            ];
-
-            panels.forEach(p => {
-                pCtx.strokeRect(p.x + 20, p.y + 20, DISPLAY_W - 40, DISPLAY_H - 40);
-                pCtx.fillStyle = `rgba(0, 242, 255, ${gridOpacity})`;
-                pCtx.fillText(p.id, p.x + 100, p.y + 150);
-                pCtx.beginPath();
-                pCtx.moveTo(p.x + DISPLAY_W/2 - 60, p.y + DISPLAY_H/2);
-                pCtx.lineTo(p.x + DISPLAY_W/2 + 60, p.y + DISPLAY_H/2);
-                pCtx.moveTo(p.x + DISPLAY_W/2, p.y + DISPLAY_H/2 - 60);
-                pCtx.lineTo(p.x + DISPLAY_W/2, p.y + DISPLAY_H/2 + 60);
-                pCtx.stroke();
-            });
-
-            pTexture.needsUpdate = true;
+        function debouncedRender() {
+            clearTimeout(renderTimeout);
+            renderTimeout = setTimeout(renderHTMLToTexture, 500);
         }
 
         function toggleMode() {
             isProjectionMode = !isProjectionMode;
-            pCanvas.style.display = isProjectionMode ? 'block' : 'none';
+            document.getElementById('projector-output').style.display = isProjectionMode ? 'block' : 'none';
             document.getElementById('canvas-container').style.display = isProjectionMode ? 'none' : 'block';
-            
-            // Added catch block to handle permission policy restrictions on fullscreen
+
             if (isProjectionMode && document.documentElement.requestFullscreen) {
-                document.documentElement.requestFullscreen().catch(err => {
-                    console.warn("Fullscreen disabled by browser policy/sandbox.");
-                });
-            } else if (!isProjectionMode && document.exitFullscreen && document.fullscreenElement) {
-                document.exitFullscreen().catch(() => {});
+                document.documentElement.requestFullscreen().catch(() => {});
             }
+            renderHTMLToTexture();
         }
 
-        function updateGridOpacity(val) { gridOpacity = val / 100; }
-        function resetCamera() { controls.reset(); camera.position.set(3, 2, 4); }
-        function onWindowResize() {
-            camera.aspect = window.innerWidth / window.innerHeight;
-            camera.updateProjectionMatrix();
-            renderer.setSize(window.innerWidth, window.innerHeight);
+        function setupInteractions() {
+            window.addEventListener('keydown', (e) => {
+                if (e.key.toLowerCase() === 'h' && document.activeElement.tagName !== 'TEXTAREA') {
+                    uiVisible = !uiVisible;
+                    document.getElementById('ui-panel').classList.toggle('hidden', !uiVisible);
+                }
+                if (e.key === 'Escape' && isProjectionMode) toggleMode();
+            });
+
+            document.getElementById('html-input').addEventListener('input', debouncedRender);
+            
+            window.addEventListener('resize', () => {
+                camera.aspect = window.innerWidth / window.innerHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(window.innerWidth, window.innerHeight);
+                debouncedRender();
+            });
+        }
+
+        function resetView() {
+            controls.reset();
+            camera.position.set(0, 0, 0.1);
         }
 
         function animate() {
             requestAnimationFrame(animate);
-            drawContent();
-            if (!isProjectionMode) controls.update();
-            renderer.render(scene, camera);
+            if (!isProjectionMode) {
+                controls.update();
+                try {
+                    renderer.render(scene, camera);
+                } catch (e) {
+                    if (e.message.includes('Tainted')) {
+                        console.error("Rendering halted due to tainted canvas.");
+                        isTainted = true;
+                    }
+                }
+            }
         }
 
-        window.onload = init;
+        window.onload = () => {
+            init();
+            renderHTMLToTexture();
+        };
     </script>
 </body>
 </html>
