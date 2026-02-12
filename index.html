@@ -5,7 +5,17 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Panoramic Export</title>
     <style>
-        body, html { margin: 0; padding: 0; background: #000; width: 100%; height: 100%; overflow: auto; }
+        /* Strict Reset for Physical Display */
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body, html { 
+            background: #000; 
+            width: 100vw; 
+            height: 100vh; 
+            overflow: hidden; /* CRITICAL: Hides scrollbars */
+            position: fixed; /* Locks viewport */
+            top: 0;
+            left: 0;
+        }
     </style>
 </head>
 <body>
