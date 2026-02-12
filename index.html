@@ -5,20 +5,27 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Panoramic Export</title>
     <style>
-        /* Strict Reset for Physical Display */
+        /* Strict Reset */
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body, html { 
             background: #000; 
             width: 100vw; 
             height: 100vh; 
-            overflow: hidden; /* CRITICAL: Hides scrollbars */
-            position: fixed; /* Locks viewport */
+            overflow: hidden; 
+        }
+        /* Scaling Container */
+        #viewport-scaler {
+            position: absolute;
             top: 0;
             left: 0;
+            width: 7680px;  /* Native design width */
+            height: 1080px; /* Native design height */
+            transform-origin: 0 0; /* Scale from top-left */
         }
     </style>
 </head>
 <body>
+    <div id="viewport-scaler">
 <div style="width: 7680px; height: 1080px; background: #0f172a; color: white; display: grid; grid-template-columns: repeat(4, 1920px); font-family: 'Segoe UI', system-ui, sans-serif; position: relative; overflow: hidden; margin: 0; padding: 0;">
     <style>* { box-sizing: border-box; }</style>
     
@@ -51,5 +58,28 @@
         <div style="font-size: 120px; font-weight: 900; color: #334155;">BACK</div>
     </div>
 </div>
+    </div>
+
+    <script>
+        function fitToScreen() {
+            const container = document.getElementById('viewport-scaler');
+            const targetW = 7680;
+            const targetH = 1080;
+            
+            const windowW = window.innerWidth;
+            const windowH = window.innerHeight;
+            
+            // Calculate scale factors
+            const scaleX = windowW / targetW;
+            const scaleY = windowH / targetH;
+            
+            // Apply scale. We stretch X and Y independently to ensure 
+            // it fills the 4 screens perfectly even if aspect ratio differs slightly.
+            container.style.transform = `scale(${scaleX}, ${scaleY})`;
+        }
+
+        window.addEventListener('resize', fitToScreen);
+        fitToScreen(); // Initial call
+    </script>
 </body>
 </html>
